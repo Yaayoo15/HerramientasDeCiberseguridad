@@ -1,0 +1,9 @@
+EventLog
+mpssvc
+PolicyAgent
+Power
+ProfSvc
+SamSs
+WinDefend
+wscsvc
+wuauserv
