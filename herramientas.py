@@ -8,6 +8,7 @@ import sys
 import os
 from openpyxl import Workbook
 from openpyxl import load_workbook
+from openpyxl.utils import get_column_letter
 from requests import get
 import re
 from email import encoders
@@ -76,14 +77,14 @@ def escan_puertos(begin,end):
     lpuertos.append(Result)
   return lpuertos
 
-def enviar_correo():
+def enviar_correo(arch):
   #Envio de correo
   em = MIMEMultipart("PLAIN")
   correo = 'confianet.client@gmail.com'
   contraseña = 'rivsvhjattmrcwpk'
   receptor = 'confianet.client@gmail.com'
   asunto = 'prueba'
-  with open('archivo.txt','rb') as attachment:
+  with open(arch,'rb') as attachment:
     cuerpo = MIMEBase("application","octect-stream")
     cuerpo.set_payload(attachment.read())
     encoders.encode_base64(cuerpo)
@@ -138,22 +139,23 @@ def validar_hash():
   return salida
 
 parser = argparse.ArgumentParser()
-parser.add_argument("-pi", "--puertoi", type=int, default=0, help="puerto donde iniciará el escaneo (default=0)")
-parser.add_argument("-pf", "--puertof", type=int, default=100, help="puerto donde terminará el escaneo (default=100)")
+parser.add_argument("-pi", "--puertoi", type=int, required=True, help="puerto donde iniciará el escaneo")
+parser.add_argument("-pf", "--puertof", type=int, required=True, help="puerto donde terminará el escaneo")
 parser.add_argument("-se", "--servicios", action="store_true", help="Si se indica, confirmará que los servicios escenciales estén inciados (guarda en servicios.txt)")
 parser.add_argument("-er", "--errores", action="store_true",  help="Si se indica, creará un registro de errores (errores.txt)")
 parser.add_argument("-vh", "--valorhash", action="store_true", help="Comprobará la integridad de archivos importantes")
-parser.add_argument("-inf", "--informe", requires=True, help="Nombre del archivo que contendrá el informe")
-param=parser.parse_args()
+parser.add_argument("-inf", "--informe", required=True, help="Nombre del archivo que contendrá el informe")
+args = parser.parse_args()
 
-x=param.pi
-y=param.pf
-inf=param.inf
+x=args.puertoi
+y=args.puertof
+inf=args.informe
 
-try:
-  lista_servicios=services()
-except:
-  logging.error('Error al intentar escanear servicios')
+if args.servicios:
+  try:
+    lista_servicios=services()
+  except:
+    logging.error('Error al intentar escanear servicios')
 
 try:
   lista_puertos=escan_puertos(x,y)
@@ -165,14 +167,23 @@ try:
 except:
   logging.warning('No hay conexion con la api ipgeolocation')
 
-try:
-  lista_hash=validar_hash()
-  if lista_hash[0]='invalido':
-    logging.error('Valores hash no coinciden')
-except:
-  logging.error('No se tiene acceso al directorio donde se encuentran los drivers')
+if args.valorhash:
+  try:
+    lista_hash=validar_hash()
+    if lista_hash[0]=='invalido':
+      logging.warning('Valores hash no coinciden')
+  except:
+    logging.error('No se tiene acceso al directorio donde se encuentran los drivers')
 
+wb = Workbook()
+excel=inf+'.xlsx'
+pagina=wb.active
+pagina.title='Resultados'
 
+for row in lista_servicios:
+    pagina.append(row)
 
-if enviar_correo()!=1:
+wb.save(excel)
+
+if enviar_correo(excel)!=1:
   logging.error('No se envío el correo correctamente')
