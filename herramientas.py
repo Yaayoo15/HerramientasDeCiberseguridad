@@ -80,8 +80,8 @@ def escan_puertos(begin,end):
 def enviar_correo(arch):
   #Envio de correo
   em = MIMEMultipart("PLAIN")
-  correo = 'confianet.client@gmail.com'
-  contraseña = 'rivsvhjattmrcwpk'
+  correo = ''
+  contraseña = ''
   receptor = 'confianet.client@gmail.com'
   asunto = 'prueba'
   with open(arch,'rb') as attachment:
