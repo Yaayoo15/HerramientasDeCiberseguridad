@@ -4,7 +4,10 @@ import nmap
 import smtplib
 import ssl
 import subprocess
+import sys
+import os
 from openpyxl import Workbook
+from openpyxl import load_workbook
 from requests import get
 import re
 from email import encoders
@@ -13,6 +16,20 @@ from email.mime.multipart import MIMEMultipart
 import logging
 
 logging.basicConfig(filename='errorres.txt', encoding='utf-8', level=logging.DEBUG)
+
+def obtener_ip():
+  ip = get('https://api.ipify.org').text
+  return ip
+
+def obtener_info():
+  ip_p=obtener_ip()
+  f = open("llave.txt", "r")
+  API_KEY=f
+  params = dict(apiKey=API_KEY, ip=ip_p)
+  respuesta = get('https://api.ipgeolocation.io/ipgeo', params=params)
+  r = respuesta.json()
+  f.close()
+  return r
 
 def services():#1 es bien y 0 es mal
   def run(cmd):
@@ -43,22 +60,11 @@ def services():#1 es bien y 0 es mal
         else:
           res.append(0)
   return res
-  
-#--------------------------------------------------------------------------
-def obtener_ip():
-  ip = get('https://api.ipify.org').text
-  return ip
-
-def sho():
-  ans = get('https://api.shodan.io/shodan/host/{189.158.196.209}?key=').text
-  with open("shodan.txt", "w") as s:
-    s.write(ans)
-  return ans
 
 def localhost():
-	hostname = socket.gethostname()
-	ip_address = socket.gethostbyname(hostname)
-	return ip_address
+  hostname = socket.gethostname()
+  ip_address = socket.gethostbyname(hostname)
+  return ip_address
 
 def escan_puertos(begin,end):
   lpuertos=[]
@@ -69,7 +75,7 @@ def escan_puertos(begin,end):
     Result=Result['scan'][Target]['tcp'][i]['state']
     lpuertos.append(Result)
   return lpuertos
-  
+
 def enviar_correo():
   #Envio de correo
   em = MIMEMultipart("PLAIN")
@@ -97,25 +103,52 @@ def enviar_correo():
     smtp.sendmail(correo,receptor, em.as_string())
   return 1
 
-
 def validar_hash():
-  #solo drivers vitales
-  #si no existe crear, si existe comparar con los drivers del system32
-  return
+  salida=[]
+  script='HashLab.ps1'
+  path=os.path.abspath(script)
+  subprocess.Popen(["powershell.exe",path], stdout=sys.stdout)
+
+  Drivers = "Drivers.txt"
+  Drivers2 = "Drivers2.txt"
+  pDrivers=os.path.abspath(Drivers)
+  pDrivers2=os.path.abspath(Drivers2)
+
+  if os.path.exists(pDrivers) and os.path.exists(pDrivers2):
+
+      ADrivers = open(pDrivers,mode='r')
+      ADrivers2 = open(pDrivers2,mode='r')
+
+      Lista = ADrivers.read().split('\n')
+      Lista2 = ADrivers2.read().split('\n')
+
+      Lista.sort()
+      Lista2.sort()
+
+      if Lista == Lista2 :
+          salida.append('valido')
+      else:
+          with open('Drivers.txt','r') as D1:
+              with open('Drivers2.txt','r') as D2:
+                  Modificados = set(D1).difference(D2)
+          with open('Modificados.txt','w') as Modi:
+              for line in Modificados:
+                  Modi.write(line)
+          salida.append('invalido')
+  return salida
 
 parser = argparse.ArgumentParser()
 parser.add_argument("-pi", "--puertoi", type=int, default=0, help="puerto donde iniciará el escaneo (default=0)")
 parser.add_argument("-pf", "--puertof", type=int, default=100, help="puerto donde terminará el escaneo (default=100)")
-#falta revisar
 parser.add_argument("-se", "--servicios", action="store_true", help="Si se indica, confirmará que los servicios escenciales estén inciados (guarda en servicios.txt)")
 parser.add_argument("-er", "--errores", action="store_true",  help="Si se indica, creará un registro de errores (errores.txt)")
 parser.add_argument("-vh", "--valorhash", action="store_true", help="Comprobará la integridad de archivos importantes")
-parser.add_argument("-in", "--informe", requires=True, help="Nombre del archivo que contendrá el informe")
+parser.add_argument("-inf", "--informe", requires=True, help="Nombre del archivo que contendrá el informe")
 param=parser.parse_args()
 
 x=param.pi
 y=param.pf
-inf=param.in
+inf=param.inf
 
 try:
   lista_servicios=services()
@@ -127,22 +160,19 @@ try:
 except:
   logging.error('Error al intentar ecanear puertos')
 
+try:
+  diccionario=obtener_info()
+except:
+  logging.warning('No hay conexion con la api ipgeolocation')
 
-  
+try:
+  lista_hash=validar_hash()
+  if lista_hash[0]='invalido':
+    logging.error('Valores hash no coinciden')
+except:
+  logging.error('No se tiene acceso al directorio donde se encuentran los drivers')
 
-  
-from openpyxl import Workbook 
-from openpyxl import load_workbook
 
-wb = Workbook()
 
-filesheet = "./prueba.xlsx"
-
-wb.save(filesheet)
-
-wb = load_workbook(filesheet)
-
-sheet = wb.active
-sheet.title = "Resultados1"
-
-wb.save(filesheet)
+if enviar_correo()!=1:
+  logging.error('No se envío el correo correctamente')
