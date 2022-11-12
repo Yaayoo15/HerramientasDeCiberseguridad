@@ -82,7 +82,7 @@ def enviar_correo(arch):
   em = MIMEMultipart("PLAIN")
   correo = ''
   contraseña = ''
-  receptor = 'confianet.client@gmail.com'
+  receptor = ''
   asunto = 'prueba'
   with open(arch,'rb') as attachment:
     cuerpo = MIMEBase("application","octect-stream")
