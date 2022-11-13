@@ -20,4 +20,10 @@ Get-Childitem $TargetFolder -Recurse -Include *.dll | Get-FileHash | Select-Obje
 }
 
 Drivers-uno
+if (Test-Path -Path 'C:/Windows/System32/drivers/' -PathType Container)
+{
+}
+else
+{
 Drivers-dos
+}
