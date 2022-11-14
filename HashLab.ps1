@@ -19,5 +19,14 @@ param(
 Get-Childitem $TargetFolder -Recurse -Include *.dll | Get-FileHash | Select-Object -Property Hash, Path | Format-Table -HideTableHeaders | Out-File $ResultFile -Encoding utf8 
 }
 
-Drivers-uno
+$pepe = Test-Path -path "C:\Users\angel\Desktop\pia\Drivers2.txt" -PathType Leaf
+
+if($pepe -eq $True ) 
+{
+}
+else
+{
 Drivers-dos
+}
+
+Drivers-uno
