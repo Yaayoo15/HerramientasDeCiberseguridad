@@ -7,9 +7,6 @@ import ssl
 import subprocess
 import sys
 import os
-from openpyxl import Workbook
-from openpyxl import load_workbook
-from openpyxl.utils import get_column_letter
 from requests import get
 import re
 from email import encoders
