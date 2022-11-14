@@ -27,13 +27,13 @@ def obtener_ip():
 
 def obtener_info():
   ip_p=obtener_ip()
-  f = open("llave.txt", "r")
-  API_KEY=f
+  file = open("llave.txt", "r")
+  API_KEY=file
   params = dict(apiKey=API_KEY, ip=ip_p)
   respuesta = get('https://api.ipgeolocation.io/ipgeo', params=params)
-  r = respuesta.json()
-  f.close()
-  return r
+  res = respuesta.json()
+  file.close()
+  return res
 
 
 def run(cmd):
