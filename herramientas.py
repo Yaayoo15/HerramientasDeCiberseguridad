@@ -32,35 +32,19 @@ def obtener_info():
   f.close()
   return r
 
-def services():#1 es bien y 0 es mal
-  def run(cmd):
-      completed_tmp = subprocess.run(["powershell", "-Command", cmd], capture_output=True, text = True)
-      completed =  completed_tmp.stdout.splitlines()
-      return completed
-  
-  def revisar_servicios():
-      comando = "Get-Service | Where-Object {$_.Status -eq 'Running'}"
-      info = run(comando)
-      with open("archivo.txt", "w") as file:
-          for i in info:
-              file.write(f"{i}\n")
-      return info
-  
-  revisar_servicios()
 
-  res = []
-  lista = []
-  servicios = open("archivo.txt", "r")
-  lser = open("servicios.txt", "r")
-  for line in servicios:
-    lista.append(line)
-    for o in lser:
-        match = re.search(o,line)
-        if match != None:
-          res.append(1)
-        else:
-          res.append(0)
-  return res
+def run(cmd):
+  completed_tmp = subprocess.run(["powershell", "-Command", cmd], capture_output=True, text = True)
+  completed =  completed_tmp.stdout.splitlines()
+  return completed
+  
+def revisar_servicios():
+  comando = "Get-Service | Where-Object {$_.Status -eq 'Running'}"
+  info = run(comando)
+  with open("archivo.txt", "w") as file:
+    for i in info:
+      file.write(f"{i}\n")
+  return 1
 
 def localhost():
   hostname = socket.gethostname()
@@ -77,31 +61,38 @@ def escan_puertos(begin,end):
     lpuertos.append(Result)
   return lpuertos
 
-def enviar_correo(arch):
+def enviar_correo(ruta, ruta1):
   #Envio de correo
   em = MIMEMultipart("PLAIN")
-  correo = ''
-  contraseña = ''
-  receptor = ''
-  asunto = 'prueba'
-  with open(arch,'rb') as attachment:
-    cuerpo = MIMEBase("application","octect-stream")
-    cuerpo.set_payload(attachment.read())
-    encoders.encode_base64(cuerpo)
-    cuerpo.add_header('Content-Disposition', f"attachment; filename= {'Servicios-Activos.txt'}")
-    em = MIMEMultipart()
-    em['from'] = correo
-    em['to'] = receptor
-    em['Subject'] = asunto
-    em.attach(cuerpo)
-    #Aqui encriptamos utilizando el metodo SSL
-    contexto = ssl.create_default_context()
-    try:
-      with smtplib.SMTP_SSL('smtp.gmail.com', 587, context= contexto) as smtp:smtp.login(correo, contraseña )
-    except:
-      with smtplib.SMTP_SSL('smtp.gmail.com', 465, context= contexto) as smtp:smtp.login(correo, contraseña )
-    
-    smtp.sendmail(correo,receptor, em.as_string())
+  correo = 'confianet.client@gmail.com'
+  contraseña = 'rivsvhjattmrcwpk'
+  reseptor = 'confianet.client@gmail.com'
+  asunto = 'Resultados del Script'
+  with open(ruta,'rb') as attachment:
+      cuerpo = MIMEBase("application","octect-stream")
+      cuerpo.set_payload(attachment.read())
+  encoders.encode_base64(cuerpo)
+  cuerpo.add_header('Content-Disposition', f"attachment; filename= {'Informe.txt'}")
+  with open(ruta1,'rb') as attachment:
+      cuerpo2 = MIMEBase("application","octect-stream")
+      cuerpo2.set_payload(attachment.read())
+  encoders.encode_base64(cuerpo2)
+  cuerpo2.add_header('Content-Disposition', f"attachment; filename= {'serviciosactivos.txt'}")
+
+  em = MIMEMultipart()
+  em['from'] = correo
+  em['to'] = reseptor
+  em['Subject'] = asunto
+  em.attach(cuerpo)
+  em.attach(cuerpo2)
+
+  #Aqui encriptamos utilizando el metodo SSL
+
+  contexto = ssl.create_default_context()
+
+  with smtplib.SMTP_SSL('smtp.gmail.com', 465, context= contexto) as smtp:
+      smtp.login(correo, contraseña )
+      smtp.sendmail(correo,reseptor, em.as_string())
   return 1
 
 def validar_hash():
@@ -151,39 +142,50 @@ x=args.puertoi
 y=args.puertof
 inf=args.informe
 
+ruta_comp=os.path.abspath(inf) #C:/user/...
+
+informe = open(ruta_comp,'w')
+informe.write('INFORME DE RESULTADOS\n\n')
+informe.close()
+
 if args.servicios:
   try:
-    lista_servicios=services()
+    revisar_servicios()
+    algo=os.path.abspath('archivo.txt')
   except:
     logging.error('Error al intentar escanear servicios')
 
 try:
   lista_puertos=escan_puertos(x,y)
+  
+  informe = open(ruta_comp,'a')
+  informe.write('\n======================================================\nServicios:\n')
+  cant = len(lista_puertos)
+  informe.write('\n\nCantidad de puertos escaneados: '+ str(cant))
+  informe.close()
+  
 except:
   logging.error('Error al intentar ecanear puertos')
 
 try:
-  diccionario=obtener_info()
+  with open(ruta_comp, "a") as diccionario:
+    diccionario.write("======================================================\nResultados de ip: \n\n")
+    for llave, valor  in obtener_info().items():
+        diccionario.write("%s %s\n" %(llave, valor))
 except:
   logging.warning('No hay conexion con la api ipgeolocation')
 
 if args.valorhash:
   try:
     lista_hash=validar_hash()
-    if lista_hash[0]=='invalido':
-      logging.warning('Valores hash no coinciden')
+    with open(ruta_comp, "a") as pepe:
+      if lista_hash[0]=='invalido':
+        logging.warning('Valores hash no coinciden')
+        pepe.write('\n\nA L E R T A... Valores hash no coinciden.')
+      else:
+        pepe.write('\n\n======================================================\nVALORES HASH VALIDADOS')
   except:
     logging.error('No se tiene acceso al directorio donde se encuentran los drivers')
 
-wb = Workbook()
-excel=inf+'.xlsx'
-pagina=wb.active
-pagina.title='Resultados'
-
-for row in lista_servicios:
-    pagina.append(row)
-
-wb.save(excel)
-
-if enviar_correo(excel)!=1:
-  logging.error('No se envío el correo correctamente')
+if enviar_correo(ruta_comp,algo)!=1:
+  logging.error('Correo no enviado')
