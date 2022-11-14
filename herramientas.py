@@ -70,9 +70,9 @@ def escan_puertos(begin,end):
 def enviar_correo(ruta, ruta1):
   #Envio de correo
   em = MIMEMultipart("PLAIN")
-  correo = 'confianet.client@gmail.com'
-  contraseña = 'rivsvhjattmrcwpk'
-  reseptor = 'confianet.client@gmail.com'
+  correo = ''
+  contraseña = ''
+  reseptor = ''
   asunto = 'Resultados del Script'
   with open(ruta,'rb') as attachment:
       cuerpo = MIMEBase("application","octect-stream")
