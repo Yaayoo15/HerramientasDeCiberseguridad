@@ -1,3 +1,4 @@
+#Se importan las librerías necesarias para el funcionamiento del script
 import argparse
 import socket
 import nmap
@@ -16,11 +17,16 @@ from email.mime.base import MIMEBase
 from email.mime.multipart import MIMEMultipart
 import logging
 
+#Se usa el constructor de logging para poder llevar control del registro de errores
+  #El archivo será llamado "errores.txt", utilizando UTF-8 como codificación y registrando errores de tipo DEBUG
 logging.basicConfig(filename='errorres.txt', encoding='utf-8', level=logging.DEBUG)
 
+#Función para obtener una IP pública por medio de la API de "ipify"
 def obtener_ip():
+  #Guardamos la dirección obtenida convertida en .text en la variable ip
   ip = get('https://api.ipify.org').text
   return ip
+
 
 def obtener_info():
   ip_p=obtener_ip()
